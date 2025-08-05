@@ -3,6 +3,26 @@ networks:
     driver: bridge
 
 services:
+  postgres:
+    image: postgres:14
+    container_name: prometheus_postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    volumes:
+      - ./data_postgres:/var/lib/postgresql/data
+    networks:
+      - prometheus_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   neo4j:
     image: neo4j
     platform: linux/amd64
@@ -11,7 +31,7 @@ services:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_server_memory_heap_initial__size=4G
-      - NEO4J_server_memory_heap_max__size=8G
+      - NEO4J_server_memory_heap_max__size=4G
       - NEO4J_dbms_memory_transaction_total_max=8G
       - NEO4J_db_transaction_timeout=600s
     networks:
@@ -79,6 +99,8 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       neo4j:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     develop:
       watch:
